@@ -1,0 +1,9 @@
+{
+  "name": "monos-en-shock-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp de Monos en Shock con Claude",
+  "main": "server.js",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js" }
+}
