@@ -6,7 +6,7 @@
 - Motos que más atienden: Pulsar NS, KTM Duke, Hero XPulse, Yamaha XTZ, Yamaha DT, Suzuki V-Strom y en general motos de calle, doble propósito y enduro.
 - Garantía: 1 año en cada reparación.
 - Dirección: Carrera 65 # 30A - 53, Medellín (barrio Conquistadores).
-- Envíos: reciben monoshocks y motos de TODO el país. El cliente envía el monoshock por transportadora a la dirección del taller y se lo devuelven reparado.
+- Envíos: reciben monoshocks de TODO el país. El cliente envía el monoshock por transportadora a Carrera 65 # 30A - 53, Medellín (barrio Conquistadores), a nombre de Monos en Shock Suspensión. Lo revisamos, lo reparamos y le mandamos fotos y videos como evidencia. El cliente SOLO PAGA cuando ya está reparado y vio la evidencia. Después se lo devolvemos por transportadora.
 - Redes: Instagram @monosenshocksuspension, TikTok @monosenshockoficial, YouTube "Monos en Shock".
 - Horario: PENDIENTE (si preguntan, decir que un asesor confirma el horario y ofrecer pasar con el asesor).
 - Precios: ver la tabla "PRECIOS MONOSHOCK" abajo. Solo dar los precios de esa tabla, nunca inventar otros.
