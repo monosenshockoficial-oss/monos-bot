@@ -133,11 +133,37 @@ ${list.map((x) => `<a class="${x.id === sel ? "on" : ""}" href="/panel?k=${k}&c=
 }
 const readBody = (req) => new Promise((res) => { let d = ""; req.on("data", (x) => (d += x)); req.on("end", () => res(d)); });
 
+// ---------------- política de privacidad (requerida por Meta)
+const PRIVACY_HTML = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de privacidad · Monos en Shock Suspensión</title>
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 16px;line-height:1.6;color:#111}h1{color:#E3262B}h2{margin-top:28px}</style></head><body>
+<h1>Política de privacidad</h1>
+<p><b>Monos en Shock Suspensión</b> · Carrera 65 # 30A - 53, Medellín, Colombia · WhatsApp +57 300 000 0163 · monosenshockoficial@gmail.com</p>
+<p>Última actualización: 20 de noviembre de 2026.</p>
+<h2>1. Qué datos recogemos</h2>
+<p>Cuando nos escribes por WhatsApp recibimos tu número de teléfono, el nombre de tu perfil y el contenido de los mensajes, fotos o audios que nos envíes (por ejemplo, la marca y modelo de tu moto o el problema de tu suspensión).</p>
+<h2>2. Para qué los usamos</h2>
+<p>Solo para atender tu consulta: responder preguntas, cotizar, agendar la revisión o el envío de tu monoshock y hacer seguimiento a la reparación y la garantía. Usamos un asistente automático con inteligencia artificial (Claude, de Anthropic) para responder más rápido; un asesor humano puede tomar la conversación en cualquier momento.</p>
+<h2>3. Con quién los compartimos</h2>
+<p>No vendemos ni compartimos tus datos con terceros para publicidad. Solo los procesan los proveedores necesarios para prestar el servicio: Meta (WhatsApp Business Platform), Anthropic (asistente de IA) y Render (alojamiento del servidor).</p>
+<h2>4. Cuánto tiempo los guardamos</h2>
+<p>Guardamos las conversaciones el tiempo necesario para atender tu servicio y la garantía, y como máximo 2 años, salvo que la ley exija otra cosa.</p>
+<h2>5. Tus derechos</h2>
+<p>De acuerdo con la Ley 1581 de 2012 de Colombia, puedes conocer, actualizar, rectificar o pedir que borremos tus datos, y revocar tu autorización. Escríbenos a monosenshockoficial@gmail.com o al WhatsApp +57 300 000 0163 y lo atendemos en un plazo máximo de 15 días hábiles.</p>
+<h2>6. Eliminación de datos</h2>
+<p>Para pedir que borremos tus datos, envía la palabra <b>BORRAR</b> por WhatsApp o escríbenos al correo indicado.</p>
+<h2>7. Cambios</h2>
+<p>Si cambiamos esta política, publicaremos la nueva versión en esta misma página.</p>
+</body></html>`;
+
 // ---------------- servidor
 http.createServer(async (req, res) => {
   const u = new URL(req.url, "http://x");
   try {
     if (req.method === "GET" && u.pathname === "/") { res.end("Monos en Shock bot OK"); return; }
+    if (req.method === "GET" && (u.pathname === "/privacidad" || u.pathname === "/terminos")) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(PRIVACY_HTML); return;
+    }
     if (u.pathname === "/webhook" && req.method === "GET") {
       if (u.searchParams.get("hub.mode") === "subscribe" && u.searchParams.get("hub.verify_token") === VERIFY_TOKEN) {
         res.end(u.searchParams.get("hub.challenge")); return;
