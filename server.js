@@ -13,6 +13,8 @@ const {
   ANTHROPIC_API_KEY,         // clave de la consola de Claude
   PANEL_PASSWORD,            // contraseña del panel web
   REGISTER_PIN,              // PIN de 6 dígitos para activar el número (solo la primera vez)
+  UPSTASH_REDIS_REST_URL,    // base de datos gratis para que los chats no se borren
+  UPSTASH_REDIS_REST_TOKEN,
   CLAUDE_MODEL = "claude-sonnet-5-5",
   GRAPH_VERSION = "v25.0",
 } = process.env;
@@ -40,12 +42,26 @@ ESTILO (muy importante): escribes como Andrés Vargas, el dueño: paisa, motero,
 INFORMACIÓN DEL TALLER:
 ${KNOWLEDGE}`;
 
+const log = (...a) => console.log(new Date().toISOString(), ...a);
 // ---------------- almacenamiento simple
 let chats = {};
 try { chats = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")); } catch {}
-const save = () => { try { fs.writeFileSync(DATA_FILE, JSON.stringify(chats)); } catch {} };
+const kv = async (cmd) => {
+  if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) return null;
+  const r = await fetch(UPSTASH_REDIS_REST_URL, { method: "POST", headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` }, body: JSON.stringify(cmd) });
+  return (await r.json()).result;
+};
+const loadChats = async () => {
+  try { const v = await kv(["GET", "chats"]); if (v) { const st = JSON.parse(v); for (const [id, c] of Object.entries(chats)) { if (st[id]) { st[id].msgs = [...st[id].msgs, ...c.msgs]; st[id].unread += c.unread; } else st[id] = c; } chats = st; log("chats cargados:", Object.keys(chats).length); } }
+  catch (e) { log("error cargando chats", e.message); }
+};
+let saveTimer = null;
+const save = () => {
+  try { fs.writeFileSync(DATA_FILE, JSON.stringify(chats)); } catch {}
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => kv(["SET", "chats", JSON.stringify(chats)]).catch((e) => log("error guardando chats", e.message)), 1500);
+};
 const chatOf = (id, name) => (chats[id] ||= { id, name: name || id, msgs: [], botPausedUntil: 0, unread: 0 });
-const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 // ---------------- WhatsApp
 async function wa(path, body) {
@@ -205,6 +221,7 @@ http.createServer(async (req, res) => {
     res.writeHead(404); res.end();
   } catch (err) { log("server error", err); if (!res.headersSent) { res.writeHead(500); res.end(); } }
 }).listen(PORT, async () => {
+  await loadChats();
   log("Bot escuchando en puerto", PORT);
   if (REGISTER_PIN && PHONE_NUMBER_ID) log("register:", JSON.stringify(await wa(`${PHONE_NUMBER_ID}/register`, { messaging_product: "whatsapp", pin: REGISTER_PIN })));
   if (WABA_ID) log("subscribed_apps:", JSON.stringify(await wa(`${WABA_ID}/subscribed_apps`, {})));
