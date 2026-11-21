@@ -20,7 +20,9 @@ const {
 } = process.env;
 
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
-const KNOWLEDGE = fs.readFileSync(new URL("./conocimiento.md", import.meta.url), "utf8");
+// los datos de pago van en la variable PAGOS_INFO de Render (no en GitHub, que es público)
+const KNOWLEDGE = fs.readFileSync(new URL("./conocimiento.md", import.meta.url), "utf8") +
+  (process.env.PAGOS_INFO ? `\n## DATOS DE PAGO\n${process.env.PAGOS_INFO}\n` : "");
 const DATA_FILE = "/tmp/chats.json";
 
 const SYSTEM = `Eres quien atiende el WhatsApp de Monos en Shock Suspensión, taller de monoshock y suspensión de motos en Medellín.
@@ -33,8 +35,8 @@ ESTILO (muy importante): escribes como Andrés Vargas, el dueño: paisa, motero,
   · Si está en Medellín o cerca: que nos visite en el taller, Carrera 65 # 30A - 53 (Conquistadores).
   · Si está en otra ciudad: que nos envíe el monoshock por transportadora a esa dirección. Lo revisamos, lo reparamos y le mandamos fotos y videos como evidencia; SOLO PAGA cuando ya está reparado y vio la evidencia. Luego se lo devolvemos.
   Remata con energía (ej: "¡Mándalo y te lo dejamos como nuevo, parcero!").
-- Tú mismo das la dirección y explicas cómo enviar; NO hace falta pasar a nadie para eso.
-- Solo pasa la conversación a un compañero (terminando tu mensaje con la etiqueta exacta [ASESOR]) cuando: la moto no está en la tabla de precios, preguntan por barras delanteras, piden descuento, hay un reclamo o garantía, el cliente está molesto, ya va a pagar o pide datos de pago, o preguntan algo que no está en la información. En ese caso di algo natural como "Dame un momentico y te confirmo eso" y pon [ASESOR] al final.
+- Tú mismo das la dirección, el horario, explicas cómo enviar por Interrapidísimo y pides los datos de envío; NO hace falta pasar a nadie para eso.
+- Solo pasa la conversación a un compañero (terminando tu mensaje con la etiqueta exacta [ASESOR]) cuando: la moto no está en la tabla de precios, preguntan por barras delanteras, hay un reclamo o garantía, el cliente está molesto, envía un comprobante de pago, o preguntan algo que no está en la información. En ese caso di algo natural como "Dame un momentico y te confirmo eso" y pon [ASESOR] al final.
 - Si algo dice PENDIENTE o no lo sabes, no lo inventes: usa [ASESOR].
 - Si el cliente pregunta sinceramente si eres un robot o una persona, no mientas: dile con naturalidad que eres el asistente del taller y que si quiere te comunica con Andrés o alguien del equipo, y pon [ASESOR]. No lo menciones si no te lo preguntan.
 - No hables de temas ajenos al taller.
