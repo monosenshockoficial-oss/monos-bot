@@ -46,20 +46,24 @@ const log = (...a) => console.log(new Date().toISOString(), ...a);
 // ---------------- almacenamiento simple
 let chats = {};
 try { chats = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")); } catch {}
+// acepta el token aunque se pegue con el texto de ejemplo de Upstash (TOKEN="...")
+const pick = (v, key) => { if (!v) return v; const m = v.match(new RegExp(key + '\\s*=\\s*"?([^"\\s]+)')); return (m ? m[1] : v).replace(/^"|"$/g, "").trim(); };
+const KV_URL = pick(UPSTASH_REDIS_REST_URL, "UPSTASH_REDIS_REST_URL");
+const KV_TOKEN = pick(UPSTASH_REDIS_REST_TOKEN, "UPSTASH_REDIS_REST_TOKEN");
 const kv = async (cmd) => {
-  if (!UPSTASH_REDIS_REST_URL || !UPSTASH_REDIS_REST_TOKEN) return null;
-  const r = await fetch(UPSTASH_REDIS_REST_URL, { method: "POST", headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` }, body: JSON.stringify(cmd) });
+  if (!KV_URL || !KV_TOKEN) return null;
+  const r = await fetch(KV_URL, { method: "POST", headers: { Authorization: `Bearer ${KV_TOKEN}` }, body: JSON.stringify(cmd) });
   return (await r.json()).result;
 };
 const loadChats = async () => {
   try { const v = await kv(["GET", "chats"]); if (v) { const st = JSON.parse(v); for (const [id, c] of Object.entries(chats)) { if (st[id]) { st[id].msgs = [...st[id].msgs, ...c.msgs]; st[id].unread += c.unread; } else st[id] = c; } chats = st; log("chats cargados:", Object.keys(chats).length); } }
-  catch (e) { log("error cargando chats", e.message); }
+  catch (e) { log("error cargando chats (revisa UPSTASH_REDIS_REST_TOKEN)"); }
 };
 let saveTimer = null;
 const save = () => {
   try { fs.writeFileSync(DATA_FILE, JSON.stringify(chats)); } catch {}
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => kv(["SET", "chats", JSON.stringify(chats)]).catch((e) => log("error guardando chats", e.message)), 1500);
+  saveTimer = setTimeout(() => kv(["SET", "chats", JSON.stringify(chats)]).catch(() => log("error guardando chats")), 1500);
 };
 const chatOf = (id, name) => (chats[id] ||= { id, name: name || id, msgs: [], botPausedUntil: 0, unread: 0 });
 
