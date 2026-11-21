@@ -28,6 +28,8 @@ Cómo funciona: el MANTENIMIENTO es el servicio base. Si al revisar hay que camb
 |---|---|---|---|
 | Pulsar NS 200 | $138.900 | $48.500 | $78.900 |
 | Pulsar NS 160 | $139.500 | $49.300 | $79.500 |
+| Pulsar NS 125 | $137.900 | $48.900 | $78.500 |
+| Pulsar NS 400Z | $139.800 | $49.700 | $79.800 |
 | KTM Duke 200 | $296.900 | $88.500 | $98.700 |
 | KTM Duke 390 | $298.500 | $89.300 | $99.500 |
 | Hero XPulse 200 | $297.800 | $88.900 | $98.900 |
