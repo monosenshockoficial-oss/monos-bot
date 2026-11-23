@@ -16,6 +16,10 @@ const {
   UPSTASH_REDIS_REST_URL,    // base de datos gratis para que los chats no se borren
   UPSTASH_REDIS_REST_TOKEN,
   CLAUDE_MODEL = "claude-sonnet-5-5",
+  ASESOR_WA = "573134374718",  // asesor: recibe aviso de envíos, garantías y chats que el bot le pasa
+  DUENO_WA = "573137553704",   // Andrés Vargas: recibe aviso cuando un cliente manda comprobante de pago
+  ALERT_TEMPLATE,              // (opcional) plantilla aprobada para avisos fuera de la ventana de 24 h
+  ALERT_TEMPLATE_LANG = "es",
   GRAPH_VERSION = "v25.0",
 } = process.env;
 
@@ -27,16 +31,19 @@ const DATA_FILE = "/tmp/chats.json";
 
 const SYSTEM = `Eres quien atiende el WhatsApp de Monos en Shock Suspensión, taller de monoshock y suspensión de motos en Medellín.
 ESTILO (muy importante): escribes como Andrés Vargas, el dueño: paisa, motero, con energía y carisma, cercano y de confianza, como un parcero que sabe mucho de suspensión. Usa jerga natural ("¡Qué más, parcero!", "de una", "con todo el gusto", "hágale", "eso tiene arreglo"), pero sin exagerar ni sonar a robot. Nada de frases de call center ("estimado cliente", "en qué más le puedo colaborar", "como asistente virtual").
+- NOMBRE: en tu PRIMERA respuesta saluda y pregúntale el nombre al cliente ("¿Con quién tengo el gusto?"), y desde ahí llámalo por su nombre. Si ya lo dijo, no lo vuelvas a preguntar.
 - Mensajes CORTOS como en un chat real (1 a 3 frases), máximo 1-2 emojis. Si hay que decir varias cosas, prioriza lo más importante.
 - Haz UNA pregunta a la vez para avanzar: qué moto es (marca, modelo, cilindraje), qué síntoma tiene (rebota, bota aceite, suena en seco, quedó dura o caída) y en qué ciudad está.
 - Explica el daño probable con palabras sencillas y da confianza ("eso es típico de retenes vencidos, tiene arreglo").
-- Precios: solo los de la tabla de PRECIOS, con la regla de base + adicionales, y aclarando que el valor final se confirma al revisarlo. Nunca inventes precios ni fechas exactas.
+- Precios: solo los de la tabla de PRECIOS. El mantenimiento YA INCLUYE retén, o-rings, líquido hidráulico, nitrógeno y diagnóstico: NUNCA los cobres aparte. Las piezas dañadas (vástago, bujes, botella, muelle) son REPARACIÓN: solo da el aproximado de $40.000 a $150.000 adicionales y aclara que se avisa antes. Nunca inventes precios ni fechas exactas.
 - CIERRE (siempre que el cliente ya tenga la info): invítalo a dar el paso:
   · Si está en Medellín o cerca: que nos visite en el taller, Carrera 65 # 30A - 53 (Conquistadores).
   · Si está en otra ciudad: que nos envíe el monoshock por transportadora a esa dirección. Lo revisamos, lo reparamos y le mandamos fotos y videos como evidencia; SOLO PAGA cuando ya está reparado y vio la evidencia. Luego se lo devolvemos.
   Remata con energía (ej: "¡Mándalo y te lo dejamos como nuevo, parcero!").
-- Tú mismo das la dirección, el horario, explicas cómo enviar por Interrapidísimo y pides los datos de envío; NO hace falta pasar a nadie para eso.
-- Solo pasa la conversación a un compañero (terminando tu mensaje con la etiqueta exacta [ASESOR]) cuando: la moto no está en la tabla de precios, preguntan por barras delanteras, hay un reclamo o garantía, el cliente está molesto, envía un comprobante de pago, o preguntan algo que no está en la información. En ese caso di algo natural como "Dame un momentico y te confirmo eso" y pon [ASESOR] al final.
+- Tú mismo das la dirección y el horario.
+- Pasa la conversación a un asesor (terminando tu mensaje con la etiqueta exacta [ASESOR]) cuando: el cliente quiere ENVIAR su monoshock desde otra ciudad (explica lo básico y luego [ASESOR]), hay una GARANTÍA o reclamo, la moto no está en la tabla de precios, preguntan por barras delanteras, el cliente está molesto, o preguntan algo que no está en la información. Di algo natural como "Dame un momentico que un asesor te atiende ya mismo" y pon [ASESOR] al final.
+- Cuando el cliente envía el COMPROBANTE de pago (una imagen o documento después de hablar del pago, o dice que ya pagó): dile que ya se lo pasas a Andrés para verificarlo y termina con la etiqueta exacta [PAGO]. No confirmes tú el pago.
+- Si alguien pregunta por Andrés Vargas o por el dueño, o es amigo o familiar de Andrés: dale su WhatsApp directo 313 755 3704 (solo WhatsApp, no recibe llamadas). Eso no necesita [ASESOR].
 - Si algo dice PENDIENTE o no lo sabes, no lo inventes: usa [ASESOR].
 - Si el cliente pregunta sinceramente si eres un robot o una persona, no mientas: dile con naturalidad que eres el asistente del taller y que si quiere te comunica con Andrés o alguien del equipo, y pon [ASESOR]. No lo menciones si no te lo preguntan.
 - No hables de temas ajenos al taller.
@@ -87,6 +94,40 @@ async function sendText(to, text, who = "bot") {
   save();
 }
 
+// ---------------- avisos al equipo (asesor / Andrés)
+// Ojo: WhatsApp solo deja escribir texto libre si ese número le escribió al bot en las últimas 24 h.
+// Si falla y hay una plantilla aprobada en ALERT_TEMPLATE, se envía con la plantilla.
+async function sendAlert(to, text) {
+  if (!to) return;
+  const r = await wa(`${PHONE_NUMBER_ID}/messages`, { messaging_product: "whatsapp", to, type: "text", text: { body: text } });
+  if (r?.messages) { log("aviso enviado a", to); return true; }
+  if (ALERT_TEMPLATE) {
+    const t = await wa(`${PHONE_NUMBER_ID}/messages`, { messaging_product: "whatsapp", to, type: "template",
+      template: { name: ALERT_TEMPLATE, language: { code: ALERT_TEMPLATE_LANG }, components: [{ type: "body", parameters: [{ type: "text", text: text.replace(/\s+/g, " ").slice(0, 900) }] }] } });
+    if (t?.messages) { log("aviso (plantilla) enviado a", to); return true; }
+  }
+  log("no se pudo avisar a", to, "(escríbele 'hola' al bot desde ese número o crea la plantilla ALERT_TEMPLATE)");
+  return false;
+}
+// reenvía una foto/documento que mandó el cliente (descarga y vuelve a subir el archivo)
+async function forwardMedia(media, to, caption) {
+  try {
+    const info = await (await fetch(`${GRAPH}/${media.id}`, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } })).json();
+    if (!info.url) return false;
+    const bin = await (await fetch(info.url, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } })).arrayBuffer();
+    const fd = new FormData();
+    fd.append("messaging_product", "whatsapp");
+    fd.append("type", info.mime_type || "image/jpeg");
+    fd.append("file", new Blob([bin], { type: info.mime_type || "image/jpeg" }), media.filename || "comprobante");
+    const up = await (await fetch(`${GRAPH}/${PHONE_NUMBER_ID}/media`, { method: "POST", headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` }, body: fd })).json();
+    if (!up.id) return false;
+    const kind = media.type === "document" ? "document" : "image";
+    const r = await wa(`${PHONE_NUMBER_ID}/messages`, { messaging_product: "whatsapp", to, type: kind, [kind]: { id: up.id, caption } });
+    return !!r?.messages;
+  } catch (e) { log("error reenviando archivo", e); return false; }
+}
+const lastClientLines = (c, n = 4) => c.msgs.filter((m) => m.from === "cliente").slice(-n).map((m) => "• " + m.text).join("\n");
+
 // ---------------- Claude
 async function askClaude(c) {
   const history = c.msgs.slice(-20).map((m) => ({ role: m.from === "cliente" ? "user" : "assistant", content: m.text }));
@@ -113,6 +154,10 @@ async function handleIncoming(msg, name) {
   let text = msg.text?.body;
   if (!text && msg.type === "interactive") text = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title;
   if (!text && msg.type === "button") text = msg.button?.text;
+  const MEDIA = { image: "una imagen", document: "un documento", audio: "un audio", video: "un video", sticker: "un sticker" };
+  if (msg.type === "image" || msg.type === "document") c.lastMedia = { id: msg[msg.type].id, type: msg.type, filename: msg.document?.filename, t: Date.now() };
+  if (!text && (msg.image?.caption || msg.document?.caption)) text = msg.image?.caption || msg.document?.caption;
+  if (msg.type !== "text" && MEDIA[msg.type]) text = `[El cliente envió ${MEDIA[msg.type]}]` + (text ? ` ${text}` : "");
   if (!text) text = `[El cliente envió un ${msg.type}]`;
   c.msgs.push({ from: "cliente", text, t: Date.now() });
   c.unread++;
@@ -120,20 +165,31 @@ async function handleIncoming(msg, name) {
   wa(`${PHONE_NUMBER_ID}/messages`, { messaging_product: "whatsapp", status: "read", message_id: msg.id }).catch(() => {});
 
   if (Date.now() < c.botPausedUntil) return; // lo atiende una persona
-  if (msg.type !== "text" && msg.type !== "interactive" && msg.type !== "button") {
-    await sendText(from, "¡Recibido, parcero! 🙌 Ya le echo ojo. Mientras tanto cuéntame por escrito qué moto es y qué le notas al monoshock.");
+  if (msg.type === "audio" || msg.type === "video" || msg.type === "sticker") {
+    await sendText(from, "¡Recibido, parcero! 🙌 Por aquí no alcanzo a escuchar audios ni ver videos; cuéntame por escrito qué moto es y qué le notas al monoshock.");
     return;
   }
   let reply = await askClaude(c);
   if (!reply) reply = "¡Qué más, parcero! 🙌 Dame un momentico y te respondo. [ASESOR]";
   const handoff = reply.includes("[ASESOR]");
-  reply = reply.replace("[ASESOR]", "").trim();
+  const pago = reply.includes("[PAGO]");
+  reply = reply.replace(/\[ASESOR\]|\[PAGO\]/g, "").trim();
   await sendText(from, reply);
+  const quien = `${c.name} (+${from})`;
+  if (pago) {
+    log("Comprobante de pago:", quien);
+    const recent = c.lastMedia && Date.now() - c.lastMedia.t < 30 * 60 * 1000;
+    const aviso = `💰 COMPROBANTE DE PAGO por verificar\nCliente: ${quien}\nÚltimos mensajes:\n${lastClientLines(c)}`;
+    await sendAlert(DUENO_WA, aviso);
+    if (recent) await forwardMedia(c.lastMedia, DUENO_WA, `Comprobante de ${quien}`);
+    c.needsHuman = true; save();
+  }
   if (handoff) {
     c.botPausedUntil = Date.now() + 12 * 3600 * 1000;
     c.needsHuman = true;
     save();
     log("Pasar a asesor:", from, c.name);
+    await sendAlert(ASESOR_WA, `🔔 Cliente esperando asesor\nCliente: ${quien}\nÚltimos mensajes:\n${lastClientLines(c)}\n\nRespóndele desde el panel del bot (el bot quedó en pausa para este chat).`);
   }
 }
 
